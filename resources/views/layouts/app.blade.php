@@ -3,10 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    {{-- Preconnect untuk external resources --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    {{-- DNS Prefetch untuk performance --}}
+    <link rel="dns-prefetch" href="//cdn.example.com">
+    
     <title>@yield('title', 'ArticleHub - Latest Articles')</title>
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap">
+    
+    {{-- CSS dengan cache busting --}}
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ config('app.asset_version', '1.0') }}">
+    
+    {{-- Preload critical resources --}}
+    <link rel="preload" href="{{ asset('css/style.css') }}" as="style">
+    
     @stack('styles')
+
+    {{-- Performance monitoring (optional) --}}
+    <script>
+        // Catat waktu navigation start
+        window.navigationStart = performance.now();
+    </script>
 </head>
 <body>
     <header class="header">
@@ -37,9 +57,9 @@
             </nav>
 
             <div class="nav-actions">
-                <button class="theme-toggle" id="themeToggle">🌙</button>
-                <button class="search-toggle" id="searchToggle">🔍</button>
-                <button class="nav-toggle" id="navToggle">☰</button>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+                <button class="search-toggle" id="searchToggle" aria-label="Toggle search">🔍</button>
+                <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
             </div>
         </div>
 
@@ -47,8 +67,15 @@
         <div class="search-bar" id="searchBar">
             <div class="container">
                 <form action="{{ route('articles.index') }}" method="GET" class="search-input-wrapper">
-                    <input type="text" name="search" placeholder="Cari artikel..." id="searchInput" value="{{ request('search') }}">
-                    <button type="submit" class="search-btn">🔍</button>
+                    <input 
+                        type="text" 
+                        name="search" 
+                        placeholder="Cari artikel..." 
+                        id="searchInput" 
+                        value="{{ request('search') }}"
+                        aria-label="Search articles"
+                    >
+                    <button type="submit" class="search-btn" aria-label="Submit search">🔍</button>
                 </form>
             </div>
         </div>
@@ -58,7 +85,7 @@
         @if(session('success'))
             <div class="alert-container">
                 <div class="container">
-                    <div class="alert alert-success">
+                    <div class="alert alert-success" role="alert">
                         <span>✓</span> {{ session('success') }}
                     </div>
                 </div>
@@ -68,7 +95,7 @@
         @if(session('error'))
             <div class="alert-container">
                 <div class="container">
-                    <div class="alert alert-error">
+                    <div class="alert alert-error" role="alert">
                         <span>✕</span> {{ session('error') }}
                     </div>
                 </div>
@@ -87,10 +114,10 @@
                     </div>
                     <p>Platform artikel terbaik untuk semua topik menarik dan informatif.</p>
                     <div class="social-links">
-                        <a href="#" class="social-link">📘</a>
-                        <a href="#" class="social-link">🐦</a>
-                        <a href="#" class="social-link">📷</a>
-                        <a href="#" class="social-link">💼</a>
+                        <a href="#" class="social-link" aria-label="Facebook">📘</a>
+                        <a href="#" class="social-link" aria-label="Twitter">🐦</a>
+                        <a href="#" class="social-link" aria-label="Instagram">📷</a>
+                        <a href="#" class="social-link" aria-label="LinkedIn">💼</a>
                     </div>
                 </div>
                 
@@ -117,8 +144,13 @@
                     <h3>Newsletter</h3>
                     <p>Berlangganan untuk mendapat artikel terbaru</p>
                     <div class="newsletter-form">
-                        <input type="email" placeholder="Email anda..." id="newsletterEmail">
-                        <button type="submit" id="subscribeBtn">✈</button>
+                        <input 
+                            type="email" 
+                            placeholder="Email anda..." 
+                            id="newsletterEmail"
+                            aria-label="Newsletter email"
+                        >
+                        <button type="submit" id="subscribeBtn" aria-label="Subscribe">✈</button>
                     </div>
                 </div>
             </div>
@@ -133,7 +165,26 @@
         </div>
     </footer>
 
-    <script src="{{ asset('js/app.js') }}"></script>
+    {{-- Defer script loading untuk performance --}}
+    <script defer src="{{ asset('js/app.js') }}?v={{ config('app.asset_version', '1.0') }}"></script>
     @stack('scripts')
+
+    {{-- Lazy load analytics/tracking scripts --}}
+    <script>
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPerformanceMonitoring);
+        } else {
+            initPerformanceMonitoring();
+        }
+
+        function initPerformanceMonitoring() {
+            // Log performance metrics
+            window.addEventListener('load', function() {
+                const perfData = window.performance.timing;
+                const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+                console.log('Page Load Time:', pageLoadTime + 'ms');
+            });
+        }
+    </script>
 </body>
 </html>

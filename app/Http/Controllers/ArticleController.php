@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Cache;
 
 class ArticleController extends Controller
 {
@@ -13,23 +15,37 @@ class ArticleController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Article::query();
+        $cacheKey = 'articles_' . md5(
+            $request->get('category', '') . 
+            $request->get('search', '') . 
+            $request->get('page', 1)
+        );
 
-        // Filter by category
-        if ($request->has('category')) {
-            $query->category($request->category);
-        }
+        // Cache selama 5 menit (300 detik)
+        $articles = Cache::remember($cacheKey, 300, function () use ($request) {
+            $query = Article::select(['id', 'title', 'author', 'date', 'category', 'summary', 'image', 'read_time']);
 
-        // Search
-        if ($request->has('search')) {
-            $query->search($request->search);
-        }
+            // Filter by category
+            if ($request->has('category') && $request->category !== 'all') {
+                $query->where('category', $request->category);
+            }
 
-        // Pagination
-        $articles = $query->latest('date')->paginate(6);
+            // Search
+            if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('summary', 'like', "%{$search}%");
+                });
+            }
+
+            return $query->latest('date')->paginate(6)->withQueryString();
+        });
         
-        // Get all categories for filter
-        $categories = Article::distinct()->pluck('category');
+        // Cache categories juga
+        $categories = Cache::remember('article_categories', 3600, function () {
+            return Article::distinct()->pluck('category');
+        });
 
         return view('articles.index', compact('articles', 'categories'));
     }
@@ -45,23 +61,26 @@ class ArticleController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'author' => 'required|string|max:255',
             'date' => 'required|date',
             'category' => 'required|string',
-            'summary' => 'required|string',
+            'summary' => 'required|string|max:500',
             'content' => 'required|string',
             'image' => 'required|string',
             'read_time' => 'required|string'
         ]);
 
-        Article::create($validated);
+        $article = Article::create($validated);
 
-        return redirect()->route('articles.index')
-            ->with('success', 'Article created successfully!');
+        // Clear cache saat ada artikel baru
+        $this->clearArticleCache();
+
+        return redirect()->route('articles.show', $article)
+            ->with('success', 'Article created successfully! 🎉');
     }
 
     /**
@@ -69,7 +88,12 @@ class ArticleController extends Controller
      */
     public function show(Article $article): View
     {
-        return view('articles.show', compact('article'));
+        // Cache detail artikel selama 24 jam
+        $cachedArticle = Cache::remember("article_{$article->id}", 86400, function () use ($article) {
+            return $article;
+        });
+
+        return view('articles.show', compact('article' => $cachedArticle));
     }
 
     /**
@@ -83,14 +107,14 @@ class ArticleController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Article $article)
+    public function update(Request $request, Article $article): RedirectResponse
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'author' => 'required|string|max:255',
             'date' => 'required|date',
             'category' => 'required|string',
-            'summary' => 'required|string',
+            'summary' => 'required|string|max:500',
             'content' => 'required|string',
             'image' => 'required|string',
             'read_time' => 'required|string'
@@ -98,18 +122,36 @@ class ArticleController extends Controller
 
         $article->update($validated);
 
+        // Clear cache untuk artikel yang di-update
+        Cache::forget("article_{$article->id}");
+        $this->clearArticleCache();
+
         return redirect()->route('articles.show', $article)
-            ->with('success', 'Article updated successfully!');
+            ->with('success', 'Article updated successfully! ✅');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Article $article)
+    public function destroy(Article $article): RedirectResponse
     {
         $article->delete();
 
+        // Clear cache saat artikel dihapus
+        Cache::forget("article_{$article->id}");
+        $this->clearArticleCache();
+
         return redirect()->route('articles.index')
-            ->with('success', 'Article deleted successfully!');
+            ->with('success', 'Article deleted successfully! 🗑️');
+    }
+
+    /**
+     * Clear all article-related caches
+     */
+    private function clearArticleCache(): void
+    {
+        Cache::tags(['articles'])->flush();
+        // Atau jika tidak menggunakan tags:
+        // Cache::forget('article_categories');
     }
 }
