@@ -38,40 +38,45 @@
             </div>
         @endif
 
-        <div class="articles-grid" id="articlesGrid">
-            @forelse($articles as $article)
-                <div class="article-card fade-in">
-                    <div class="article-image">
-                        <img src="{{ asset($article->image) }}" alt="{{ $article->title }}" loading="lazy">
-                    </div>
-                    <div class="article-content">
-                        <div class="article-meta">
-                            <span class="article-category">{{ $article->category }}</span>
-                            <span class="article-author">{{ $article->author }}</span>
-                            <span class="article-date">{{ $article->date->format('d F Y') }}</span>
-                        </div>
-                        <h3 class="article-title">{{ $article->title }}</h3>
-                        <p class="article-summary">{{ $article->summary }}</p>
-                        <div class="article-footer">
-                            <a href="{{ route('articles.show', $article) }}" class="read-more-btn">
-                                <span>Read More</span>
-                                <span>→</span>
-                            </a>
-                            <span class="read-time">
-                                <span>🕒</span>
-                                {{ $article->read_time }}
-                            </span>
-                        </div>
-                    </div>
+<div class="articles-grid" id="articlesGrid">
+    @forelse($articles as $article)
+        <div class="article-card fade-in">
+            <div class="article-image">
+                <img src="{{ asset($article->image) }}" alt="{{ $article->title }}" loading="lazy">
+            </div>
+            <div class="article-content">
+                <div class="article-meta">
+                    <span class="article-category">{{ ucfirst($article->category) }}</span>
+                    <span class="article-author">{{ $article->author }}</span>
+                    <span class="article-date">{{ $article->date->format('d F Y') }}</span>
                 </div>
-            @empty
-                <div class="no-results">
-                    <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">🔍</div>
-                    <h3>No Articles Found</h3>
-                    <p>Try adjusting your search terms or filters</p>
+                <h3 class="article-title">{{ Str::limit($article->title, 60) }}</h3>
+                
+                {{-- Batasi summary hanya 150 karakter --}}
+                <p class="article-summary">
+                    {{ Str::limit($article->summary, 150) }}
+                </p>
+                
+                <div class="article-footer">
+                    <a href="{{ route('articles.show', $article) }}" class="read-more-btn">
+                        <span>Read More</span>
+                        <span>→</span>
+                    </a>
+                    <span class="read-time">
+                        <span>🕒</span>
+                        {{ $article->read_time }}
+                    </span>
                 </div>
-            @endforelse
+            </div>
         </div>
+    @empty
+        <div class="no-results">
+            <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">🔍</div>
+            <h3>No Articles Found</h3>
+            <p>Try adjusting your search terms or filters</p>
+        </div>
+    @endforelse
+</div>
 
         <!-- Pagination -->
         <div class="load-more-container">
