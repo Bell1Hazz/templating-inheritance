@@ -11,7 +11,7 @@
                 <p>Update your article information</p>
             </div>
 
-            <form action="{{ route('articles.update', $article) }}" method="POST" class="article-form">
+            <form action="{{ route('articles.update', $article) }}" method="POST" enctype="multipart/form-data" class="article-form">
                 @csrf
                 @method('PUT')
                 
@@ -33,26 +33,25 @@
                         @enderror
                     </div>
 
-<!-- Author -->
-<div class="form-group">
-    <label for="user_id" class="form-label">Author *</label>
-    <select 
-        id="user_id" 
-        name="user_id" 
-        class="form-select @error('user_id') error @enderror"
-        required
-    >
-        @foreach(\App\Models\User::all() as $user)
-            <option value="{{ $user->id }}" {{ old('user_id', $article->user_id) == $user->id ? 'selected' : '' }}>
-                {{ $user->name }}
-            </option>
-        @endforeach
-    </select>
-    @error('user_id')
-        <span class="form-error">{{ $message }}</span>
-    @enderror
-</div>
-
+                    <!-- Author -->
+                    <div class="form-group">
+                        <label for="user_id" class="form-label">Author *</label>
+                        <select 
+                            id="user_id" 
+                            name="user_id" 
+                            class="form-select @error('user_id') error @enderror"
+                            required
+                        >
+                            @foreach(\App\Models\User::all() as $user)
+                                <option value="{{ $user->id }}" {{ old('user_id', $article->user_id) == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('user_id')
+                            <span class="form-error">{{ $message }}</span>
+                        @enderror
+                    </div>
 
                     <!-- Date -->
                     <div class="form-group">
@@ -70,25 +69,25 @@
                         @enderror
                     </div>
 
-<!-- Category -->
-<div class="form-group">
-    <label for="category_id" class="form-label">Category *</label>
-    <select 
-        id="category_id" 
-        name="category_id" 
-        class="form-select @error('category_id') error @enderror"
-        required
-    >
-        @foreach($categories as $category)
-            <option value="{{ $category->id }}" {{ old('category_id', $article->category_id) == $category->id ? 'selected' : '' }}>
-                {{ $category->name }}
-            </option>
-        @endforeach
-    </select>
-    @error('category_id')
-        <span class="form-error">{{ $message }}</span>
-    @enderror
-</div>
+                    <!-- Category -->
+                    <div class="form-group">
+                        <label for="category_id" class="form-label">Category *</label>
+                        <select 
+                            id="category_id" 
+                            name="category_id" 
+                            class="form-select @error('category_id') error @enderror"
+                            required
+                        >
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ old('category_id', $article->category_id) == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('category_id')
+                            <span class="form-error">{{ $message }}</span>
+                        @enderror
+                    </div>
 
                     <!-- Read Time -->
                     <div class="form-group">
@@ -107,20 +106,71 @@
                         @enderror
                     </div>
 
-                    <!-- Image URL -->
+                    <!-- 🖼️ IMAGE UPLOAD (with current image preview) -->
                     <div class="form-group full-width">
-                        <label for="image" class="form-label">Image Path *</label>
-                        <input 
-                            type="text" 
-                            id="image" 
-                            name="image" 
-                            class="form-input @error('image') error @enderror" 
-                            placeholder="images/your-image.jpg"
-                            value="{{ old('image', $article->image) }}"
-                            required
-                        >
-                        <small class="form-hint">Current: {{ $article->image }}</small>
+                        <label for="image" class="form-label">Article Image</label>
+                        
+                        <!-- Current Image Preview -->
+                        @if($article->image)
+                        <div class="current-image-preview" style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Current Image:</label>
+                            <img 
+                                src="{{ asset('storage/' . $article->image) }}" 
+                                alt="Current article image"
+                                style="max-width: 300px; border-radius: 8px; border: 2px solid var(--border-color);"
+                            >
+                        </div>
+                        @endif
+                        
+                        <div class="image-upload-wrapper">
+                            <input 
+                                type="file" 
+                                id="image" 
+                                name="image" 
+                                class="form-input-file @error('image') error @enderror" 
+                                accept="image/jpeg,image/png,image/jpg,image/webp"
+                                onchange="previewImage(event)"
+                            >
+                            <label for="image" class="file-upload-label">
+                                <span class="file-upload-icon">📁</span>
+                                <span class="file-upload-text" id="fileNameDisplay">Upload new image...</span>
+                                <span class="file-upload-btn">Browse</span>
+                            </label>
+                            
+                            <!-- New Image Preview -->
+                            <div id="imagePreview" class="image-preview" style="display: none;">
+                                <img id="previewImg" src="" alt="Preview">
+                                <button type="button" onclick="removeImage()" class="remove-preview-btn">✕ Remove</button>
+                            </div>
+                            
+                            <small class="form-hint">
+                                Leave empty to keep current image | Supported: JPG, PNG, WEBP | Max: 2MB
+                            </small>
+                        </div>
                         @error('image')
+                            <span class="form-error">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="form-group full-width">
+                        <label for="tags" class="form-label">Tags (Optional)</label>
+                        <select 
+                            id="tags" 
+                            name="tags[]" 
+                            class="form-select @error('tags') error @enderror"
+                            multiple
+                            style="height: 120px;"
+                        >
+                            @foreach($tags as $tag)
+                                <option value="{{ $tag->id }}" 
+                                    {{ in_array($tag->id, old('tags', $article->tags->pluck('id')->toArray())) ? 'selected' : '' }}>
+                                    {{ $tag->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="form-hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple</small>
+                        @error('tags')
                             <span class="form-error">{{ $message }}</span>
                         @enderror
                     </div>
@@ -163,11 +213,9 @@
                     <a href="{{ route('articles.show', $article) }}" class="btn-secondary">
                         <span>←</span> Cancel
                     </a>
-                    <div style="display: flex; gap: 1rem;">
-                        <button type="submit" class="btn-primary">
-                            <span>💾</span> Update Article
-                        </button>
-                    </div>
+                    <button type="submit" class="btn-primary">
+                        <span>💾</span> Update Article
+                    </button>
                 </div>
             </form>
 
@@ -187,3 +235,38 @@
     </div>
 </section>
 @endsection
+
+@push('scripts')
+<script>
+// Image Preview Function
+function previewImage(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    
+    if (file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+            fileNameDisplay.textContent = file.name;
+        }
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+// Remove Image Function
+function removeImage() {
+    const fileInput = document.getElementById('image');
+    const preview = document.getElementById('imagePreview');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    
+    fileInput.value = '';
+    preview.style.display = 'none';
+    fileNameDisplay.textContent = 'Upload new image...';
+}
+</script>
+@endpush
