@@ -66,25 +66,47 @@
                     </div>
 
                     <!-- Category -->
-                    <div class="form-group">
-                        <label for="category" class="form-label">Category *</label>
-                        <select 
-                            id="category" 
-                            name="category" 
-                            class="form-select @error('category') error @enderror"
-                            required
-                        >
-                            <option value="">Select a category</option>
-                            <option value="technology" {{ old('category') == 'technology' ? 'selected' : '' }}>Technology</option>
-                            <option value="design" {{ old('category') == 'design' ? 'selected' : '' }}>Design</option>
-                            <option value="business" {{ old('category') == 'business' ? 'selected' : '' }}>Business</option>
-                            <option value="lifestyle" {{ old('category') == 'lifestyle' ? 'selected' : '' }}>Lifestyle</option>
-                            <option value="health" {{ old('category') == 'health' ? 'selected' : '' }}>Health</option>
-                        </select>
-                        @error('category')
-                            <span class="form-error">{{ $message }}</span>
-                        @enderror
-                    </div>
+<!-- Author (User) -->
+<div class="form-group">
+    <label for="user_id" class="form-label">Author *</label>
+    <select 
+        id="user_id" 
+        name="user_id" 
+        class="form-select @error('user_id') error @enderror"
+        required
+    >
+        <option value="">Select author</option>
+        @foreach(\App\Models\User::all() as $user)
+            <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
+                {{ $user->name }}
+            </option>
+        @endforeach
+    </select>
+    @error('user_id')
+        <span class="form-error">{{ $message }}</span>
+    @enderror
+</div>
+
+<!-- Category -->
+<div class="form-group">
+    <label for="category_id" class="form-label">Category *</label>
+    <select 
+        id="category_id" 
+        name="category_id" 
+        class="form-select @error('category_id') error @enderror"
+        required>
+    >
+        <option value="">Select a category</option>
+     @foreach($categories as $category)
+        <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+            {{ $category->name }}
+        </option>
+         @endforeach
+     </select>
+        @error('category_id')
+        <span class="form-error">{{ $message }}</span>
+     @enderror
+    </div>
 
                     <!-- Read Time -->
                     <div class="form-group">
