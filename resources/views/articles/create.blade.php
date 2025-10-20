@@ -11,7 +11,8 @@
                 <p>Share your knowledge with the world</p>
             </div>
 
-            <form action="{{ route('articles.store') }}" method="POST" class="article-form" id="articleForm">
+            {{-- IMPORTANT: Add enctype for file upload --}}
+            <form action="{{ route('articles.store') }}" method="POST" enctype="multipart/form-data" class="article-form" id="articleForm">
                 @csrf
                 
                 <div class="form-grid">
@@ -32,19 +33,23 @@
                         @enderror
                     </div>
 
-                    <!-- Author -->
+                    <!-- Author (User) -->
                     <div class="form-group">
-                        <label for="author" class="form-label">Author Name *</label>
-                        <input 
-                            type="text" 
-                            id="author" 
-                            name="author" 
-                            class="form-input @error('author') error @enderror" 
-                            placeholder="Your name..."
-                            value="{{ old('author') }}"
+                        <label for="user_id" class="form-label">Author *</label>
+                        <select 
+                            id="user_id" 
+                            name="user_id" 
+                            class="form-select @error('user_id') error @enderror"
                             required
                         >
-                        @error('author')
+                            <option value="">Select author</option>
+                            @foreach(\App\Models\User::all() as $user)
+                                <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('user_id')
                             <span class="form-error">{{ $message }}</span>
                         @enderror
                     </div>
@@ -66,47 +71,25 @@
                     </div>
 
                     <!-- Category -->
-<!-- Author (User) -->
-<div class="form-group">
-    <label for="user_id" class="form-label">Author *</label>
-    <select 
-        id="user_id" 
-        name="user_id" 
-        class="form-select @error('user_id') error @enderror"
-        required
-    >
-        <option value="">Select author</option>
-        @foreach(\App\Models\User::all() as $user)
-            <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
-                {{ $user->name }}
-            </option>
-        @endforeach
-    </select>
-    @error('user_id')
-        <span class="form-error">{{ $message }}</span>
-    @enderror
-</div>
-
-<!-- Category -->
-<div class="form-group">
-    <label for="category_id" class="form-label">Category *</label>
-    <select 
-        id="category_id" 
-        name="category_id" 
-        class="form-select @error('category_id') error @enderror"
-        required>
-    >
-        <option value="">Select a category</option>
-     @foreach($categories as $category)
-        <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-            {{ $category->name }}
-        </option>
-         @endforeach
-     </select>
-        @error('category_id')
-        <span class="form-error">{{ $message }}</span>
-     @enderror
-    </div>
+                    <div class="form-group">
+                        <label for="category_id" class="form-label">Category *</label>
+                        <select 
+                            id="category_id" 
+                            name="category_id" 
+                            class="form-select @error('category_id') error @enderror"
+                            required
+                        >
+                            <option value="">Select a category</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('category_id')
+                            <span class="form-error">{{ $message }}</span>
+                        @enderror
+                    </div>
 
                     <!-- Read Time -->
                     <div class="form-group">
@@ -125,20 +108,58 @@
                         @enderror
                     </div>
 
-                    <!-- Image URL -->
+                    <!-- 🖼️ IMAGE UPLOAD (NEW!) -->
                     <div class="form-group full-width">
-                        <label for="image" class="form-label">Image Path *</label>
-                        <input 
-                            type="text" 
-                            id="image" 
-                            name="image" 
-                            class="form-input @error('image') error @enderror" 
-                            placeholder="images/your-image.jpg"
-                            value="{{ old('image') }}"
-                            required
-                        >
-                        <small class="form-hint">Upload image to public/images/ folder and enter the path here</small>
+                        <label for="image" class="form-label">Article Image *</label>
+                        <div class="image-upload-wrapper">
+                            <input 
+                                type="file" 
+                                id="image" 
+                                name="image" 
+                                class="form-input-file @error('image') error @enderror" 
+                                accept="image/jpeg,image/png,image/jpg,image/webp"
+                                onchange="previewImage(event)"
+                                required
+                            >
+                            <label for="image" class="file-upload-label">
+                                <span class="file-upload-icon">📁</span>
+                                <span class="file-upload-text" id="fileNameDisplay">Choose an image...</span>
+                                <span class="file-upload-btn">Browse</span>
+                            </label>
+                            
+                            <!-- Image Preview -->
+                            <div id="imagePreview" class="image-preview" style="display: none;">
+                                <img id="previewImg" src="" alt="Preview">
+                                <button type="button" onclick="removeImage()" class="remove-preview-btn">✕ Remove</button>
+                            </div>
+                            
+                            <small class="form-hint">
+                                Supported: JPG, PNG, WEBP | Max size: 2MB | Recommended: 1200x600px
+                            </small>
+                        </div>
                         @error('image')
+                            <span class="form-error">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <!-- Tags (Multi-select) -->
+                    <div class="form-group full-width">
+                        <label for="tags" class="form-label">Tags (Optional)</label>
+                        <select 
+                            id="tags" 
+                            name="tags[]" 
+                            class="form-select @error('tags') error @enderror"
+                            multiple
+                            style="height: 120px;"
+                        >
+                            @foreach($tags as $tag)
+                                <option value="{{ $tag->id }}" {{ in_array($tag->id, old('tags', [])) ? 'selected' : '' }}>
+                                    {{ $tag->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="form-hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple</small>
+                        @error('tags')
                             <span class="form-error">{{ $message }}</span>
                         @enderror
                     </div>
@@ -193,17 +214,35 @@
 
 @push('scripts')
 <script>
-    // Character counter for summary
-    const summaryTextarea = document.getElementById('summary');
-    if (summaryTextarea) {
-        summaryTextarea.addEventListener('input', function() {
-            const maxLength = 200;
-            const currentLength = this.value.length;
-            
-            if (currentLength > maxLength) {
-                this.value = this.value.substring(0, maxLength);
-            }
-        });
+// Image Preview Function
+function previewImage(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    
+    if (file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+            fileNameDisplay.textContent = file.name;
+        }
+        
+        reader.readAsDataURL(file);
     }
+}
+
+// Remove Image Function
+function removeImage() {
+    const fileInput = document.getElementById('image');
+    const preview = document.getElementById('imagePreview');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    
+    fileInput.value = '';
+    preview.style.display = 'none';
+    fileNameDisplay.textContent = 'Choose an image...';
+}
 </script>
 @endpush
