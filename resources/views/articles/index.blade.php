@@ -46,8 +46,8 @@
             </div>
             <div class="article-content">
                 <div class="article-meta">
-                    <span class="article-category">{{ ucfirst($article->category) }}</span>
-                    <span class="article-author">{{ $article->author }}</span>
+                    <span class="article-category">{{ $article->category->name }}</span>
+                    <span class="article-author">{{ $article->user->name }}</span>
                     <span class="article-date">{{ $article->date->format('d F Y') }}</span>
                 </div>
                 <h3 class="article-title">{{ Str::limit($article->title, 60) }}</h3>
@@ -69,6 +69,37 @@
                 </div>
             </div>
         </div>
+        <div class="detail-info">
+    <span class="detail-author">👤 {{ $article->user->name }}</span>
+    <span class="detail-date">📅 {{ $article->date->format('d F Y') }}</span>
+    <span class="detail-time">🕒 {{ $article->read_time }}</span>
+    <span class="detail-views">👁️ {{ number_format($article->views) }} views</span>
+</div>
+
+{{-- Display tags --}}
+<div class="detail-tags">
+    @foreach($article->tags as $tag)
+        <span class="tag">{{ $tag->name }}</span>
+    @endforeach
+</div>
+
+{{-- Display comments --}}
+<div class="comments-section">
+    <h3>Comments ({{ $article->comments->count() }})</h3>
+    @foreach($article->comments()->parent()->get() as $comment)
+        <div class="comment">
+            <strong>{{ $comment->user->name }}</strong>
+            <p>{{ $comment->content }}</p>
+            
+            @foreach($comment->replies as $reply)
+                <div class="comment-reply">
+                    <strong>{{ $reply->user->name }}</strong>
+                    <p>{{ $reply->content }}</p>
+                </div>
+            @endforeach
+        </div>
+    @endforeach
+</div>
     @empty
         <div class="no-results">
             <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">🔍</div>
@@ -116,5 +147,6 @@
             </div>
         </div>
     </div>
+    
 </section>
 @endsection
