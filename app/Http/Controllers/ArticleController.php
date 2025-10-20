@@ -10,6 +10,8 @@ use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
@@ -20,14 +22,12 @@ class ArticleController extends Controller
     {
         $query = Article::with(['user', 'category', 'tags']);
 
-        // Filter by category slug
         if ($request->has('category') && $request->category) {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('slug', $request->category);
             });
         }
 
-        // Search
         if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -56,7 +56,7 @@ class ArticleController extends Controller
     /**
      * Store a newly created resource in storage.
      * 
-     * 🔒 TRANSACTION: Pastikan article & tags tersimpan bersamaan
+     * 🖼️ IMAGE UPLOAD: Auto-handle dengan nama unique
      */
     public function store(Request $request): RedirectResponse
     {
@@ -67,17 +67,31 @@ class ArticleController extends Controller
             'date' => 'required|date',
             'summary' => 'required|string|max:500',
             'content' => 'required|string',
-            'image' => 'required|string',
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048', // Max 2MB
             'read_time' => 'required|string',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
         ]);
 
         try {
-            // 🔒 START TRANSACTION
-            $article = DB::transaction(function () use ($validated) {
+            $article = DB::transaction(function () use ($request, $validated) {
                 
-                // Step 1: Create Article
+                // 🖼️ HANDLE IMAGE UPLOAD
+                $imagePath = null;
+                if ($request->hasFile('image')) {
+                    // Generate unique filename: timestamp + random string
+                    $extension = $request->file('image')->getClientOriginalExtension();
+                    $filename = time() . '_' . Str::random(10) . '.' . $extension;
+                    
+                    // Store di storage/app/public/articles
+                    $imagePath = $request->file('image')->storeAs(
+                        'articles',
+                        $filename,
+                        'public'
+                    );
+                }
+
+                // Create Article
                 $article = Article::create([
                     'user_id' => $validated['user_id'],
                     'category_id' => $validated['category_id'],
@@ -85,35 +99,34 @@ class ArticleController extends Controller
                     'date' => $validated['date'],
                     'summary' => $validated['summary'],
                     'content' => $validated['content'],
-                    'image' => $validated['image'],
+                    'image' => $imagePath, // Store path: articles/filename.jpg
                     'read_time' => $validated['read_time'],
                 ]);
 
-                // Step 2: Attach Tags (jika ada)
+                // Attach Tags
                 if (isset($validated['tags']) && count($validated['tags']) > 0) {
                     $article->tags()->attach($validated['tags']);
                 }
 
-                // Step 3: Log activity (optional)
-                Log::info('Article created', [
+                Log::info('Article created with image', [
                     'article_id' => $article->id,
-                    'title' => $article->title,
-                    'user_id' => $article->user_id,
+                    'image_path' => $imagePath,
                 ]);
 
                 return $article;
             });
-            // 🔒 END TRANSACTION (Auto COMMIT jika sukses)
 
             return redirect()->route('articles.show', $article)
                 ->with('success', 'Article created successfully! 🎉');
 
         } catch (\Exception $e) {
-            // 🔒 Auto ROLLBACK jika ada error
-            
+            // Rollback & delete uploaded image if transaction fails
+            if (isset($imagePath) && Storage::disk('public')->exists($imagePath)) {
+                Storage::disk('public')->delete($imagePath);
+            }
+
             Log::error('Failed to create article', [
                 'error' => $e->getMessage(),
-                'user_id' => $validated['user_id'] ?? null,
             ]);
 
             return redirect()->back()
@@ -127,10 +140,7 @@ class ArticleController extends Controller
      */
     public function show(Article $article): View
     {
-        // Increment views (simple operation, no transaction needed)
         $article->incrementViews();
-        
-        // Load relationships
         $article->load(['user', 'category', 'tags', 'comments.user', 'comments.replies.user']);
         
         return view('articles.show', compact('article'));
@@ -143,14 +153,14 @@ class ArticleController extends Controller
     {
         $categories = Category::all();
         $tags = Tag::all();
-        $article->load('tags'); // Eager load tags
+        $article->load('tags');
         return view('articles.edit', compact('article', 'categories', 'tags'));
     }
 
     /**
      * Update the specified resource in storage.
      * 
-     * 🔒 TRANSACTION: Pastikan article & tags update bersamaan
+     * 🖼️ IMAGE UPLOAD: Replace gambar lama dengan baru (optional)
      */
     public function update(Request $request, Article $article): RedirectResponse
     {
@@ -161,17 +171,42 @@ class ArticleController extends Controller
             'date' => 'required|date',
             'summary' => 'required|string|max:500',
             'content' => 'required|string',
-            'image' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Optional saat update
             'read_time' => 'required|string',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
         ]);
 
         try {
-            // 🔒 START TRANSACTION
-            DB::transaction(function () use ($article, $validated) {
+            DB::transaction(function () use ($request, $article, $validated) {
                 
-                // Step 1: Update Article
+                $oldImagePath = $article->image;
+
+                // 🖼️ HANDLE IMAGE UPLOAD (jika ada upload baru)
+                if ($request->hasFile('image')) {
+                    // Generate unique filename
+                    $extension = $request->file('image')->getClientOriginalExtension();
+                    $filename = time() . '_' . Str::random(10) . '.' . $extension;
+                    
+                    // Upload new image
+                    $newImagePath = $request->file('image')->storeAs(
+                        'articles',
+                        $filename,
+                        'public'
+                    );
+
+                    // Delete old image
+                    if ($oldImagePath && Storage::disk('public')->exists($oldImagePath)) {
+                        Storage::disk('public')->delete($oldImagePath);
+                    }
+
+                    $validated['image'] = $newImagePath;
+                } else {
+                    // Keep old image
+                    $validated['image'] = $oldImagePath;
+                }
+
+                // Update Article
                 $article->update([
                     'user_id' => $validated['user_id'],
                     'category_id' => $validated['category_id'],
@@ -183,20 +218,18 @@ class ArticleController extends Controller
                     'read_time' => $validated['read_time'],
                 ]);
 
-                // Step 2: Sync Tags (remove old, add new)
+                // Sync Tags
                 if (isset($validated['tags'])) {
                     $article->tags()->sync($validated['tags']);
                 } else {
-                    $article->tags()->detach(); // Remove all tags
+                    $article->tags()->detach();
                 }
 
-                // Step 3: Log activity
                 Log::info('Article updated', [
                     'article_id' => $article->id,
-                    'title' => $article->title,
+                    'image_changed' => $request->hasFile('image'),
                 ]);
             });
-            // 🔒 END TRANSACTION
 
             return redirect()->route('articles.show', $article)
                 ->with('success', 'Article updated successfully! ✅');
@@ -216,33 +249,32 @@ class ArticleController extends Controller
     /**
      * Remove the specified resource from storage.
      * 
-     * 🔒 TRANSACTION: Pastikan article, tags, comments terhapus bersamaan
+     * 🖼️ IMAGE: Delete gambar saat article dihapus
      */
     public function destroy(Article $article): RedirectResponse
     {
         try {
-            // 🔒 START TRANSACTION
             DB::transaction(function () use ($article) {
                 
-                $articleTitle = $article->title;
+                $imagePath = $article->image;
                 
-                // Step 1: Detach Tags (optional, cascade sudah handle)
+                // Delete Tags & Comments
                 $article->tags()->detach();
-
-                // Step 2: Delete Comments (cascade sudah handle via foreign key)
-                // Tapi kita bisa manual juga:
                 $article->comments()->delete();
 
-                // Step 3: Delete Article
+                // Delete Article
                 $article->delete();
 
-                // Step 4: Log activity
-                Log::info('Article deleted', [
+                // 🖼️ DELETE IMAGE from storage
+                if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+                    Storage::disk('public')->delete($imagePath);
+                }
+
+                Log::info('Article deleted with image', [
                     'article_id' => $article->id,
-                    'title' => $articleTitle,
+                    'image_deleted' => $imagePath,
                 ]);
             });
-            // 🔒 END TRANSACTION
 
             return redirect()->route('articles.index')
                 ->with('success', 'Article deleted successfully! 🗑️');
