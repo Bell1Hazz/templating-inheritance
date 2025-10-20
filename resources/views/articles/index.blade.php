@@ -47,14 +47,14 @@
     @forelse($articles as $article)
 <div class="article-card fade-in">
     <div class="article-image">
-        <img 
-            src="{{ asset($article->image) }}" 
-            alt="{{ $article->title }}"
-            width="400"
-            height="250"
-            loading="lazy"
-            decoding="async"
-        >
+<img 
+    src="{{ asset('storage/' . $article->image) }}" 
+    alt="{{ $article->title }}"
+    width="400"
+    height="250"
+    loading="lazy"
+    decoding="async"
+>
     </div>
     <div class="article-content">
         <div class="article-meta">
