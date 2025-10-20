@@ -50,16 +50,6 @@ class Article extends Model
     }
 
     // SCOPES
-    public function scopeCategory($query, $categorySlug)
-    {
-        if ($categorySlug) {
-            return $query->whereHas('category', function ($q) use ($categorySlug) {
-                $q->where('slug', $categorySlug);
-            });
-        }
-        return $query;
-    }
-
     public function scopeSearch($query, $search)
     {
         if ($search) {

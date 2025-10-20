@@ -22,15 +22,20 @@
 <!-- Articles Section -->
 <section class="articles-section" id="articles">
     <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">Latest Articles</h2>
-            <div class="article-filters">
-                <a href="{{ route('articles.index') }}" class="filter-btn {{ !request('category') ? 'active' : '' }}">All</a>
-                <a href="{{ route('articles.index', ['category' => 'technology']) }}" class="filter-btn {{ request('category') == 'technology' ? 'active' : '' }}">Technology</a>
-                <a href="{{ route('articles.index', ['category' => 'design']) }}" class="filter-btn {{ request('category') == 'design' ? 'active' : '' }}">Design</a>
-                <a href="{{ route('articles.index', ['category' => 'business']) }}" class="filter-btn {{ request('category') == 'business' ? 'active' : '' }}">Business</a>
-            </div>
-        </div>
+       <div class="section-header">
+    <h2 class="section-title">Latest Articles</h2>
+    <div class="article-filters">
+        <a href="{{ route('articles.index') }}" class="filter-btn {{ !request('category') ? 'active' : '' }}">
+            All
+        </a>
+        @foreach($categories as $cat)
+            <a href="{{ route('articles.index', ['category' => $cat->slug]) }}" 
+               class="filter-btn {{ request('category') == $cat->slug ? 'active' : '' }}">
+                {{ $cat->name }}
+            </a>
+        @endforeach
+    </div>
+</div>
         
         @if(session('success'))
             <div class="alert alert-success">
@@ -40,35 +45,38 @@
 
 <div class="articles-grid" id="articlesGrid">
     @forelse($articles as $article)
-        <div class="article-card fade-in">
-            <div class="article-image">
-                <img src="{{ asset($article->image) }}" alt="{{ $article->title }}" loading="lazy">
-            </div>
-            <div class="article-content">
-                <div class="article-meta">
-                    <span class="article-category">{{ $article->category->name }}</span>
-                    <span class="article-author">{{ $article->user->name }}</span>
-                    <span class="article-date">{{ $article->date->format('d F Y') }}</span>
-                </div>
-                <h3 class="article-title">{{ Str::limit($article->title, 60) }}</h3>
-                
-                {{-- Batasi summary hanya 150 karakter --}}
-                <p class="article-summary">
-                    {{ Str::limit($article->summary, 150) }}
-                </p>
-                
-                <div class="article-footer">
-                    <a href="{{ route('articles.show', $article) }}" class="read-more-btn">
-                        <span>Read More</span>
-                        <span>→</span>
-                    </a>
-                    <span class="read-time">
-                        <span>🕒</span>
-                        {{ $article->read_time }}
-                    </span>
-                </div>
-            </div>
+<div class="article-card fade-in">
+    <div class="article-image">
+        <img 
+            src="{{ asset($article->image) }}" 
+            alt="{{ $article->title }}"
+            width="400"
+            height="250"
+            loading="lazy"
+            decoding="async"
+        >
+    </div>
+    <div class="article-content">
+        <div class="article-meta">
+            <span class="article-category">{{ $article->category->name }}</span>
+            <span class="article-author">{{ $article->user->name }}</span>
+            <span class="article-date">{{ $article->date->format('d F Y') }}</span>
         </div>
+        <h3 class="article-title">{{ Str::limit($article->title, 60) }}</h3>
+        <p class="article-summary">{{ Str::limit($article->summary, 150) }}</p>
+        
+        <div class="article-footer">
+            <a href="{{ route('articles.show', $article) }}" class="read-more-btn">
+                <span>Read More</span>
+                <span>→</span>
+            </a>
+            <span class="read-time">
+                <span>🕒</span>
+                {{ $article->read_time }}
+            </span>
+        </div>
+    </div>
+</div>
         <div class="detail-info">
     <span class="detail-author">👤 {{ $article->user->name }}</span>
     <span class="detail-date">📅 {{ $article->date->format('d F Y') }}</span>
