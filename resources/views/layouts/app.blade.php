@@ -140,19 +140,18 @@
                     </ul>
                 </div>
                 
-                <div class="footer-section">
-                    <h3>Newsletter</h3>
-                    <p>Berlangganan untuk mendapat artikel terbaru</p>
-                    <div class="newsletter-form">
-                        <input 
-                            type="email" 
-                            placeholder="Email anda..." 
-                            id="newsletterEmail"
-                            aria-label="Newsletter email"
-                        >
-                        <button type="submit" id="subscribeBtn" aria-label="Subscribe">✈</button>
-                    </div>
-                </div>
+               <div class="footer-section">
+    <h3>Categories</h3>
+    <ul class="footer-links">
+        @foreach(\App\Models\Category::limit(5)->get() as $category)
+            <li>
+                <a href="{{ route('articles.index', ['category' => $category->slug]) }}">
+                    {{ $category->name }}
+                </a>
+            </li>
+        @endforeach
+    </ul>
+</div>
             </div>
             
             <div class="footer-bottom">
