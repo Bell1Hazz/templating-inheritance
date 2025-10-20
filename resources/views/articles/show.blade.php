@@ -42,9 +42,12 @@
             </div>
 
             <!-- Featured Image -->
-            <div style="margin: 2rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);">
-                <img src="{{ asset($article->image) }}" alt="{{ $article->title }}" style="width: 100%; height: auto; display: block;">
-            </div>
+        <div style="margin: 2rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);">
+             <img 
+        src="{{ asset('storage/' . $article->image) }}" 
+        alt="{{ $article->title }}" 
+        style="width: 100%; height: auto; display: block;" >
+        </div>
 
             <!-- Article Summary (Highlighted) -->
             <div style="padding: 1.5rem; background: var(--bg-secondary); border-left: 4px solid {{ $article->category->color }}; border-radius: 8px; margin: 2rem 0;">
